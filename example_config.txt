@@ -1,0 +1,22 @@
+# Example configuration for ADC MQTT project
+# You can use idf.py menuconfig to set these values
+
+# WiFi Configuration
+CONFIG_ESP_WIFI_SSID="your_wifi_ssid"
+CONFIG_ESP_WIFI_PASSWORD="your_wifi_password"
+CONFIG_ESP_MAXIMUM_RETRY=5
+CONFIG_ESP_WIFI_AUTH_WPA2_PSK=y
+
+# MQTT Configuration  
+CONFIG_BROKER_URL="mqtt://mqtt.eclipseprojects.io"
+CONFIG_MQTT_USERNAME=""
+CONFIG_MQTT_PASSWORD=""
+CONFIG_MQTT_CLIENT_ID="esp32_adc_client"
+CONFIG_MQTT_TOPIC_ADC="esp32/adc"
+CONFIG_MQTT_QOS=1
+
+# ADC Configuration
+CONFIG_ADC_SAMPLE_RATE_HZ=20000
+CONFIG_ADC_READING_INTERVAL_MS=1000
+CONFIG_ADC_CHANNEL_1=2
+CONFIG_ADC_CHANNEL_2=3
