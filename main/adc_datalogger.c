@@ -72,7 +72,7 @@ static adc_channel_t channel[2] = {CONFIG_ADC_CHANNEL_1, CONFIG_ADC_CHANNEL_2};
 static EventGroupHandle_t s_wifi_event_group;
 
 static TaskHandle_t s_task_handle;
-static const char *TAG = "ADC_MQTT";
+static const char *TAG = "ADC_DATALOGGER";
 static int s_retry_num = 0;
 static esp_mqtt_client_handle_t mqtt_client;
 static bool mqtt_connected = false;
