@@ -21,8 +21,6 @@ class RealTimePlot:
     def __init__(self, root):
         self.root = root
         self.root.title("Datalogger ESP32C3 ADC via MQTT")
-        self.test_count = 1  # Start test number of the day
-        self.base_name = None  # Initialize base name as None
 
         self.directory = directory  # Define directory in instance
         if not os.path.exists(self.directory):
@@ -119,7 +117,7 @@ class RealTimePlot:
         self.data_buffer = bytearray()  
 
         # Initialize x and y vectors for both channels
-        self.time_stamps = np.linspace(0, self.duration, num=int(self.duration * self.frequency / 1000))
+        self.time_stamps = np.round(np.linspace(0, self.duration, num=int(self.duration * self.frequency / 1000) + 1), 6)
         self.data1 = np.zeros_like(self.time_stamps)
         self.data2 = np.zeros_like(self.time_stamps)
 
@@ -156,7 +154,7 @@ class RealTimePlot:
         self.duration = int(self.duration_entry.get())
 
         # Update x and y vectors
-        self.time_stamps = np.linspace(0, self.duration, num=int(self.duration * self.frequency / 1000))
+        self.time_stamps = np.round(np.linspace(0, self.duration, num=int(self.duration * self.frequency / 1000) + 1), 6)
         self.data1 = np.zeros_like(self.time_stamps)
         self.data2 = np.zeros_like(self.time_stamps)
 
@@ -171,9 +169,6 @@ class RealTimePlot:
         self.ax1.legend(loc='upper right')
         self.ax2.legend(loc='upper right')
         self.canvas.draw()
-
-        # Reset base name to start a new test
-        self.base_name = None
 
         # Connect to MQTT broker
         broker = self.broker_entry.get()
@@ -243,9 +238,6 @@ class RealTimePlot:
         
         self.collecting_data = False
 
-        # Determine test number and generate base name
-        self.get_last_tests()
-
     def get_sampling_info(self):
         return f"Frequency: {self.frequency} Hz, Duration: {self.duration} ms"
 
@@ -279,62 +271,22 @@ class RealTimePlot:
         elif save_format == "PNG":
             self.save_png()
 
-    def get_last_tests(self):
-        today = datetime.datetime.now().strftime("%Y_%m_%d")  # Date only
-
-        # Pattern to match files with hour and minute before _E<number>
-        # Example: log_2024_10_04_09_45_E1.csv
-        pattern = rf"log_{today}_\d{{2}}_\d{{2}}_E(\d+)\.\w+"
-
-        test_files = [f for f in os.listdir(self.directory) if re.match(pattern, f)]
-
-        # Debug: list found files
-        print(f"Files found for today ({today}): {test_files}")
-
-        if test_files:
-            # Extract test number from each matching file
-            test_numbers = []
-            for f in test_files:
-                match = re.match(pattern, f)
-                if match:
-                    test_numbers.append(int(match.group(1)))
-            print(f"Test numbers found: {test_numbers}")
-
-            if test_numbers:
-                self.test_count = max(test_numbers) + 1  # Increment the highest number found
-                print(f"Next test number: E{self.test_count}")
-            else:
-                self.test_count = 1
-                print("No tests found. Starting with E1.")
-        else:
-            self.test_count = 1  # If no files, start with E1
-            print("No files found for today. Starting with E1.")
-
-        # Generate and store test base name
-        now = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M")
-        self.base_name = f"log_{now}_E{self.test_count}"
-        print(f"Base name generated: {self.base_name}")
-
     def get_base_filename(self):
-        if not self.base_name:
-            self.get_last_tests()
-        return self.base_name
+        now = datetime.datetime.now()
+        timestamp = now.strftime("%Y%m%d%H%M%S") + f"{now.microsecond // 1000:03d}"
+        return f"log_{timestamp}"
 
     def save_csv(self):
         base_name = self.get_base_filename()
         file_name = f"{base_name}.csv"
         file_path = os.path.join(self.directory, file_name)
 
-        with open(file_path, 'w') as f:
-            f.write(f"Sampling: {self.get_sampling_info()}\n")
-            f.write('\n')
-
         df = pd.DataFrame({
             'time': self.time_stamps,
             'ch1': self.data1,
             'ch2': self.data2
         })
-        df.to_csv(file_path, mode='a', index=False)
+        df.to_csv(file_path, index=False)
         print(f"Data saved to {file_path}")
 
     def save_vector(self):
