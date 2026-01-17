@@ -283,8 +283,8 @@ class RealTimePlot:
 
         df = pd.DataFrame({
             'time': self.time_stamps,
-            'ch1': self.data1,
-            'ch2': self.data2
+            'ch1': self.data1.astype(int),
+            'ch2': self.data2.astype(int)
         })
         df.to_csv(file_path, index=False)
         print(f"Data saved to {file_path}")
