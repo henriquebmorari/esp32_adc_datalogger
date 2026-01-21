@@ -1,17 +1,16 @@
-import paho.mqtt.client as mqtt
+import os
 import time
+import datetime
 import threading
+import paho.mqtt.client as mqtt
+import numpy as np
+import pandas as pd
 import tkinter as tk
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-import numpy as np
-import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import datetime
-import os
-import re
 
-# MQTT Configuration
+# Configuration
 MQTT_BROKER = "192.168.15.101"  # MQTT broker address
 MQTT_PORT = 1883
 MQTT_TOPIC = "esp32/adc"  # Topic to receive ADC data
