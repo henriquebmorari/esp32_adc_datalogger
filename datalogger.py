@@ -14,16 +14,66 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 MQTT_BROKER = "192.168.15.101"  # MQTT broker address
 MQTT_PORT = 1883
 MQTT_TOPIC = "esp32/adc"  # Topic to receive ADC data
-directory = "./logs"  # Path where files will be saved
+LOGS_DIR = "./logs"  # Path where files will be saved
 
 class RealTimePlot:
     def __init__(self, root):
         self.root = root
         self.root.title("Datalogger ESP32C3 ADC via MQTT")
-
-        self.directory = directory  # Define directory in instance
+        self.root.geometry("1200x900")  # Set initial window size
+        
+        self.directory = LOGS_DIR  # Define directory in instance
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)  # Create directory if it doesn't exist
+
+        # Create main frame with scrollbar
+        self.main_frame = tk.Frame(root)
+        self.main_frame.pack(fill=tk.BOTH, expand=1)
+
+        # Create canvas and scrollbars
+        self.canvas = tk.Canvas(self.main_frame)
+        self.v_scrollbar = tk.Scrollbar(self.main_frame, orient="vertical", command=self.canvas.yview)
+        self.h_scrollbar = tk.Scrollbar(self.main_frame, orient="horizontal", command=self.canvas.xview)
+        self.scrollable_frame = tk.Frame(self.canvas)
+
+        # Configure scrolling
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.v_scrollbar.set, xscrollcommand=self.h_scrollbar.set)
+
+        # Pack canvas and scrollbars
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.v_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.h_scrollbar.grid(row=1, column=0, sticky="ew")
+        
+        # Configure grid weights
+        self.main_frame.grid_rowconfigure(0, weight=1)
+        self.main_frame.grid_columnconfigure(0, weight=1)
+
+        # Bind mousewheel to canvas for both directions
+        def _on_mousewheel(event):
+            if event.state & 0x1:  # Shift key pressed for horizontal scroll
+                self.canvas.xview_scroll(int(-1*(event.delta/120)), "units")
+            else:  # Normal vertical scroll
+                self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Bind arrow keys for keyboard navigation
+        def _on_key_press(event):
+            if event.keysym == "Up":
+                self.canvas.yview_scroll(-1, "units")
+            elif event.keysym == "Down":
+                self.canvas.yview_scroll(1, "units")
+            elif event.keysym == "Left":
+                self.canvas.xview_scroll(-1, "units")
+            elif event.keysym == "Right":
+                self.canvas.xview_scroll(1, "units")
+        self.root.bind("<Key>", _on_key_press)
+        self.root.focus_set()
 
         # Create two subplots for two channels
         self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(10, 8))
@@ -47,13 +97,13 @@ class RealTimePlot:
         self.ax2.grid(True)
         self.ax2.legend(loc='upper right')
 
-        self.canvas = FigureCanvasTkAgg(self.fig, master=root)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack()
+        self.plot_canvas = FigureCanvasTkAgg(self.fig, master=self.scrollable_frame)
+        self.plot_canvas.draw()
+        self.plot_canvas.get_tk_widget().pack()
         self.fig.subplots_adjust(bottom=0.2, hspace=0.8)
 
         # MQTT Configuration
-        self.mqtt_frame = tk.Frame(root)
+        self.mqtt_frame = tk.Frame(self.scrollable_frame)
         self.mqtt_frame.pack()
 
         self.broker_label = tk.Label(self.mqtt_frame, text="MQTT Broker:")
@@ -75,7 +125,7 @@ class RealTimePlot:
         self.topic_entry.pack(side=tk.LEFT)
 
         # First row: ADC Configuration
-        self.adc_frame = tk.Frame(root)
+        self.adc_frame = tk.Frame(self.scrollable_frame)
         self.adc_frame.pack()
 
         self.freq_label = tk.Label(self.adc_frame, text="Sampling Frequency (Hz):")
@@ -91,7 +141,7 @@ class RealTimePlot:
         self.duration_entry.pack(side=tk.LEFT)
 
         # Second row: Buttons
-        self.button_frame = tk.Frame(root)
+        self.button_frame = tk.Frame(self.scrollable_frame)
         self.button_frame.pack()
 
         self.start_button = tk.Button(self.button_frame, text="Start", command=self.start_plot)
@@ -167,7 +217,7 @@ class RealTimePlot:
         self.ax2.set_title(f'ADC Data - Channel 2 (Freq: {self.frequency} Hz, Dur: {self.duration} ms)')
         self.ax1.legend(loc='upper right')
         self.ax2.legend(loc='upper right')
-        self.canvas.draw()
+        self.plot_canvas.draw()
 
         # Connect to MQTT broker
         broker = self.broker_entry.get()
@@ -258,7 +308,7 @@ class RealTimePlot:
         self.ax1.set_xlim(0, self.time_stamps[-1])
         self.ax2.set_xlim(0, self.time_stamps[-1])
 
-        self.canvas.draw()
+        self.plot_canvas.draw()
         return self.line1, self.line2
 
     def save_data(self):
